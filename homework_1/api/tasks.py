@@ -1,51 +1,70 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
-from schemas import CreateTask, EditTask
+from core.auth import get_current_user
+from core.database import get_db
+from repositories import TaskRepository
+from schemas import CreateTask, EditTask, TaskResponse
 from services import TaskService
 
-router = APIRouter(prefix="/tasks", tags=["Tasks"])
+router = APIRouter(
+    prefix="/tasks",
+    tags=["Tasks"],
+    dependencies=[Depends(get_current_user)],
+)
 
-@router.get("/", status_code=status.HTTP_200_OK)
-def get_task(service: TaskService = Depends()):
-    get_result = service.get_all_tasks()
-    if not get_result:
-        return JSONResponse({
-            "status": "error",
-            "message": "no tasks found"
-        }, status.HTTP_404_NOT_FOUND)
+def get_task_service(db: Session = Depends(get_db)) -> TaskService:
+    repository = TaskRepository(db)
+    return TaskService(repository)
 
-    return get_result
+@router.get(
+    "/",
+    response_model=list[TaskResponse],
+    status_code=status.HTTP_200_OK,
+)
+def get_task(service: TaskService = Depends(get_task_service)):
+    return service.get_all_tasks()
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-def create_task(new_task: CreateTask, service: TaskService = Depends()):
-    create_result = service.add_task(new_task)
-    if not create_result:
-        return JSONResponse({
-            "status": "error",
-            "message": "task cannot be created"
-        }, status.HTTP_404_NOT_FOUND)
+@router.post(
+    "/",
+    response_model=TaskResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_task(new_task: CreateTask, service: TaskService = Depends(get_task_service)):
+    return service.add_task(new_task)
 
-    return create_result
-
-@router.put("/{task_name}", status_code=status.HTTP_200_OK)
-def edit_task(task_name: str, edited_task: EditTask, service: TaskService = Depends()):
-    edit_result = service.edit_task(task_name, edited_task)
-    if not edit_result:
-        return JSONResponse({
-            "status": "error",
-            "message": "task cannot be edited"
-        }, status.HTTP_404_NOT_FOUND)
+@router.put(
+    "/{task_id}",
+    response_model=TaskResponse,
+    status_code=status.HTTP_200_OK,
+)
+def edit_task(task_id: int, edited_task: EditTask, service: TaskService = Depends(get_task_service)):
+    edit_result = service.edit_task(task_id, edited_task)
+    if edit_result is None:
+        return JSONResponse(
+            {
+                "status": "error",
+                "message": "task cannot be edited",
+            },
+            status.HTTP_404_NOT_FOUND,
+        )
 
     return edit_result
 
-@router.delete("/{task_name}", status_code=status.HTTP_200_OK)
-def delete_task(task_name: str, service: TaskService = Depends()):
-    delete_result = service.delete_task(task_name)
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_200_OK,
+)
+def delete_task(task_id: int, service: TaskService = Depends(get_task_service)):
+    delete_result = service.delete_task(task_id)
     if not delete_result:
-        return JSONResponse({
-            "status": "error",
-            "message": "task cannot be deleted"
-        }, status.HTTP_404_NOT_FOUND)
+        return JSONResponse(
+            {
+                "status": "error",
+                "message": "task cannot be deleted",
+            },
+            status.HTTP_404_NOT_FOUND,
+        )
 
-    return delete_result
+    return {"status": "task deleted"}
