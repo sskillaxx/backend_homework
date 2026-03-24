@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from models.tasks import Task
-from schemas.tasks import CreateTask, EditTask
+from models.tasks import Task, Comment
+from schemas.tasks import CreateTask, EditTask, CreateComment
 
 class TaskRepository:
     def __init__(self, db: Session):
@@ -40,3 +40,13 @@ class TaskRepository:
         self.db.delete(task)
         self.db.commit()
         return True
+    
+    def create_comment(self, task_id: int, new_comment: CreateComment) -> Comment:
+        comment = Comment(task_id=task_id, **new_comment.model_dump())
+        self.db.add(comment)
+        self.db.commit()
+        self.db.refresh(comment)
+        return comment
+
+    def get_comments_by_task_id(self, task_id: int) -> list[Comment]:
+        return self.db.query(Comment).filter(Comment.task_id == task_id).all()

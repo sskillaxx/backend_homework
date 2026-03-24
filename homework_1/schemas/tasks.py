@@ -21,3 +21,14 @@ class TaskResponse(BaseTask):
     id: int
     deadline: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class CreateComment(BaseModel):
+    text: str = Field(min_length=1, max_length=255)
+
+class CommentResponse(BaseModel):
+    id: int
+    task_id: int
+    text: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

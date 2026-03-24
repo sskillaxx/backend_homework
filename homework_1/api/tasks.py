@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from core.auth import get_current_user
 from core.database import get_db
 from repositories import TaskRepository
-from schemas import CreateTask, EditTask, TaskResponse
+from schemas import CreateTask, EditTask, TaskResponse, CreateComment, CommentResponse
 from services import TaskService
 
 router = APIRouter(
-    prefix="/tasks",
+    prefix="/v1/tasks",
     tags=["Tasks"],
     dependencies=[Depends(get_current_user)],
 )
@@ -32,7 +32,7 @@ def get_task(service: TaskService = Depends(get_task_service)):
     status_code=status.HTTP_201_CREATED,
 )
 def create_task(new_task: CreateTask, service: TaskService = Depends(get_task_service)):
-    return service.add_task(new_task)
+    return service.create_task(new_task)
 
 @router.put(
     "/{task_id}",
@@ -40,31 +40,28 @@ def create_task(new_task: CreateTask, service: TaskService = Depends(get_task_se
     status_code=status.HTTP_200_OK,
 )
 def edit_task(task_id: int, edited_task: EditTask, service: TaskService = Depends(get_task_service)):
-    edit_result = service.edit_task(task_id, edited_task)
-    if edit_result is None:
-        return JSONResponse(
-            {
-                "status": "error",
-                "message": "task cannot be edited",
-            },
-            status.HTTP_404_NOT_FOUND,
-        )
-
-    return edit_result
+    return service.edit_task(task_id, edited_task)
 
 @router.delete(
     "/{task_id}",
     status_code=status.HTTP_200_OK,
 )
 def delete_task(task_id: int, service: TaskService = Depends(get_task_service)):
-    delete_result = service.delete_task(task_id)
-    if not delete_result:
-        return JSONResponse(
-            {
-                "status": "error",
-                "message": "task cannot be deleted",
-            },
-            status.HTTP_404_NOT_FOUND,
-        )
-
+    service.delete_task(task_id)
     return {"status": "task deleted"}
+
+@router.post(
+    "/{task_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_comment(task_id: int, new_comment: CreateComment, service: TaskService = Depends(get_task_service)):
+    return service.create_comment(task_id, new_comment)
+
+@router.get(
+    "/{task_id}/comments",
+    response_model=list[CommentResponse],
+    status_code=status.HTTP_200_OK,
+)
+def get_comments(task_id: int, service: TaskService = Depends(get_task_service)):
+    return service.get_task_comments(task_id)

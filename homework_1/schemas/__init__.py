@@ -1,5 +1,5 @@
 from schemas.auth import LoginUser, RegisterUser, TokenResponse, UserResponse
-from schemas.tasks import BaseTask, CreateTask, EditTask, TaskResponse
+from schemas.tasks import BaseTask, CreateTask, EditTask, TaskResponse, CreateComment, CommentResponse
 
 __all__ = (
     "RegisterUser",
@@ -10,4 +10,6 @@ __all__ = (
     "CreateTask",
     "EditTask",
     "TaskResponse",
+    "CreateComment",
+    "CommentResponse",
 )
